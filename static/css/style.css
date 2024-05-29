@@ -26,3 +26,14 @@ li {
     margin-bottom: 10px;
     text-align: left; /* alinha o texto à esquerda dentro do item de lista */
 }
+
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    background-color: #00796b;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
