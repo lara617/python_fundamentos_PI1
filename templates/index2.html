@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papelaria DELA</title>
+    <link rel="stylesheet" type="text/css" href="../static/css/style2.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bem-Vindo</h1>
+        </header>
+        <center><img src="/static/images/papelariaDELA.png"></center> <br><br>
+
+        <div id="menu">
+            <button onclick="mostrarFormulario('formVenderProduto')">Vender Produto</button>
+            <button onclick="mostrarFormulario('formVisualizarEstoqueIndividual')">Visualizar Estoque Individual</button>
+            <button onclick="mostrarFormulario('formVisualizarEstoqueGeral')">Visualizar Estoque Geral</button>
+            <button onclick="mostrarFormulario('formAtualizarEstoque')">Atualizar Estoque</button>
+            <button onclick="mostrarFormulario('formAdicionarProduto')">Adicionar Produto</button>
+            <button onclick="mostrarFormulario('formRemoverProduto')">Remover Produto</button>
+            <button onclick="mostrarFormulario('formVerLucro')">Ver Lucro</button>
+        </div>
+
+        <!-- Formulário para vender produto -->
+        <form id="formVenderProduto" class="formulario" action="/vender_produto" method="post" style="display:none">
+            <label for="produtoVender">Nome do Produto:</label>
+            <input type="text" id="produtoVender" name="produtoVender" required>
+            <label for="quantidadeVender">Quantidade:</label>
+            <input type="number" id="quantidadeVender" name="quantidadeVender" required>
+            <label for="valorPago">Valor Pago:</label>
+            <input type="number" id="valorPago" name="valorPago" step="0.01" required>
+            <button type="submit">Vender Produto</button>
+            <div id="resultadoVenderProduto"></div>
+        </form>
+
+        <!-- Formulário para visualizar o estoque de um produto individual -->
+        <form id="formVisualizarEstoqueIndividual" class="formulario" action="/visualizar_estoque_individual" method="post" style="display:none">
+            <label for="produto">Nome do Produto:</label>
+            <input type="text" id="produto" name="produto" required>
+            <button type="submit">Visualizar Estoque</button>
+            <div id="resultadoVisualizacao"></div>
+        </form>
+
+        <!-- Formulário para visualizar o estoque geral -->
+        <form id="formVisualizarEstoqueGeral" class="formulario" action="/visualizar_estoque_geral" method="post" style="display:none">
+            <button type="submit">Visualizar Estoque Geral</button>
+            <div id="resultadoVisualizacao"></div>
+        </form>
+
+        <!-- Formulário para atualizar o estoque de um produto -->
+        <form id="formAtualizarEstoque" class="formulario" action="/atualizar_estoque" method="post" style="display:none">
+            <label for="produtoAtualizar">Nome do Produto:</label>
+            <input type="text" id="produtoAtualizar" name="produtoAtualizar" required>
+            <label for="novoEstoque">Novo Estoque:</label>
+            <input type="number" id="novoEstoque" name="novoEstoque" required>
+            <button type="submit">Atualizar Estoque</button>
+            <div id="resultadoAtualizacao"></div>
+        </form>
+
+        <!-- Formulário para adicionar um novo produto -->
+        <form id="formAdicionarProduto" class="formulario" action="/adicionar_produto" method="post" style="display:none">
+            <label for="novoProduto">Novo Produto:</label>
+            <input type="text" id="novoProduto" name="novoProduto" required>
+            <label for="estoqueProduto">Estoque:</label>
+            <input type="number" id="estoqueProduto" name="estoqueProduto" required>
+            <label for="precoProduto">Preço:</label>
+            <input type="number" id="precoProduto" name="precoProduto" step="0.01" required>
+            <button type="submit">Adicionar Produto</button>
+            <div id="resultadoAdicao"></div>
+        </form>
+
+        <!-- Formulário para remover um produto -->
+        <form id="formRemoverProduto" class="formulario" action="/remover_produto" method="post" style="display:none">
+            <label for="produtoRemover">Nome do Produto a Remover:</label>
+            <input type="text" id="produtoRemover" name="produtoRemover" required>
+            <button type="submit">Remover Produto</button>
+            <div id="resultadoRemocao"></div>
+        </form>
+
+        <!-- Formulário para ver lucro -->
+        <form id="formVerLucro" class="formulario" action="/ver_lucro" method="post" style="display:none">
+            <label for="precoVenda">Preço de Venda:</label>
+            <input type="number" id="precoVenda" name="precoVenda" step="0.01" required>
+            <label for="precoCompra">Preço de Compra:</label>
+            <input type="number" id="precoCompra" name="precoCompra" step="0.01" required>
+            <label for="quantidadeVendida">Quantidade Vendida:</label>
+            <input type="number" id="quantidadeVendida" name="quantidadeVendida" required>
+            <button type="submit">Calcular Lucro</button>
+            <div id="resultadoLucro"></div>
+        </form>
+    </div>
+    <footer>
+        <p>&copy; Papelaria DELA</p>
+    </footer>
+
+    <script>
+        function mostrarFormulario(formId) {
+            var forms = document.getElementsByClassName('formulario');
+            for (var i = 0; i < forms.length; i++) {
+                forms[i].style.display = 'none';
+            }
+            document.getElementById(formId).style.display = 'block';
+        }
+    </script>
+</body>
+</html>
