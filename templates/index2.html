@@ -17,35 +17,19 @@
             <button onclick="mostrarFormulario('formVenderProduto')">Vender Produto</button>
             <button onclick="mostrarFormulario('formAdicionarProduto')">Adicionar Produto</button>
             <button onclick="mostrarFormulario('formRemoverProduto')">Remover Produto</button>
-            <button onclick="mostrarEstoqueGeral()">Visualizar Estoque Geral</button>
-            <!-- Outros botões de menu aqui -->
+            <button onclick="alternarEstoqueGeral()">Visualizar Estoque Geral</button>
+            <button onclick="calcularLucro()">Calcular Lucro</button>
+            <button onclick="mostrarFormulario('formAtualizarEstoque')">Atualizar Estoque</button> <!-- Botão para mostrar o formulário de atualização de estoque -->
         </div>
 
-        <!-- Formulário para vender produto -->
-        <form id="formVenderProduto" class="formulario" style="display:none">
-            <!-- Seus campos de formulário para vender produto aqui -->
+        <!-- Formulário para atualizar estoque -->
+        <form id="formAtualizarEstoque" class="formulario" style="display:none">
+            <input type="text" id="produtoAtualizarEstoque" placeholder="Nome do produto">
+            <input type="number" id="novoEstoque" placeholder="Novo estoque">
+            <button type="button" onclick="atualizarEstoque()">Atualizar Estoque</button>
         </form>
 
-        <!-- Formulário para adicionar produto -->
-        <form id="formAdicionarProduto" class="formulario" style="display:none">
-            <input type="text" id="novoProduto" placeholder="Nome do produto">
-            <input type="number" id="estoqueProduto" placeholder="Estoque inicial">
-            <input type="number" id="precoProduto" placeholder="Preço">
-            <button type="button" onclick="adicionarProduto()">Adicionar Produto</button>
-        </form>
-
-        <!-- Formulário para remover produto -->
-        <form id="formRemoverProduto" class="formulario" style="display:none">
-            <input type="text" id="produtoRemover" placeholder="Nome do produto">
-            <button type="button" onclick="removerProduto()">Remover Produto</button>
-        </form>
-
-        <div id="estoqueGeral" style="display:none">
-            <h2>Estoque Geral</h2>
-            <ul id="listaProdutos">
-                <!-- Os produtos em estoque serão exibidos aqui -->
-            </ul>
-        </div>
+        <!-- Restante do seu HTML continua aqui -->
 
     </div>
     <footer>
@@ -53,6 +37,10 @@
     </footer>
 
     <script>
+        var carrinho = [];
+        var estoqueVisivel = false;
+        var lucroVisivel = false;
+
         function mostrarFormulario(formId) {
             var forms = document.getElementsByClassName('formulario');
             for (var i = 0; i < forms.length; i++) {
@@ -119,21 +107,28 @@
             });
         }
 
-        function mostrarEstoqueGeral() {
-            fetch('http://127.0.0.1:5000/visualizar_estoque_geral')
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Erro ao obter estoque geral.');
-                }
-            })
-            .then(data => {
-                exibirEstoqueGeral(data.estoque_geral);
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-            });
+        function alternarEstoqueGeral() {
+            var estoqueGeralDiv = document.getElementById('estoqueGeral');
+            if (estoqueVisivel) {
+                estoqueGeralDiv.style.display = 'none';
+                estoqueVisivel = false;
+            } else {
+                fetch('http://127.0.0.1:5000/visualizar_estoque_geral')
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Erro ao obter estoque geral.');
+                    }
+                })
+                .then(data => {
+                    exibirEstoqueGeral(data.estoque_geral);
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                });
+                estoqueVisivel = true;
+            }
         }
 
         function exibirEstoqueGeral(estoque) {
@@ -141,7 +136,7 @@
             listaProdutos.innerHTML = '';
 
             for (var produto in estoque) {
-                var quantidade = estoque[produto];
+                var quantidade = estoque[produto].estoque; // Ajuste aqui para acessar a quantidade de estoque
                 var listItem = document.createElement('li');
                 listItem.textContent = produto + ': ' + quantidade;
                 listaProdutos.appendChild(listItem);
@@ -149,6 +144,137 @@
 
             document.getElementById('estoqueGeral').style.display = 'block';
         }
+
+        function calcularLucro() {
+            var lucroDiv = document.getElementById('lucro');
+            var lucroTotal = parseFloat(document.getElementById('totalCarrinho').textContent) * 0.1; // 10% de lucro
+
+            if (lucroVisivel) {
+                lucroDiv.style.display = 'none';
+                lucroVisivel = false;
+            } else {
+                document.getElementById('lucroTotal').textContent = lucroTotal.toFixed(2);
+                lucroDiv.style.display = 'block';
+                lucroVisivel = true;
+            }
+        }
+
+        function adicionarAoCarrinho() {
+            var produto = document.getElementById('produtoVenda').value;
+            var quantidade = parseInt(document.getElementById('quantidadeVenda').value);
+
+            fetch('http://127.0.0.1:5000/visualizar_estoque_individual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ produto: produto })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro ao obter estoque do produto.');
+                }
+            })
+            .then(data => {
+                if (data.estoque >= quantidade) {
+                    var item = carrinho.find(item => item.produto === produto);
+                    if (item) {
+                        item.quantidade += quantidade;
+                    } else {
+                        carrinho.push({ produto: produto, quantidade: quantidade, preco: data.preco });
+                    }
+                    atualizarCarrinho();
+                } else {
+                    alert('Estoque insuficiente.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+            });
+        }
+
+        function atualizarCarrinho() {
+            var listaCarrinho = document.getElementById('listaCarrinho');
+            listaCarrinho.innerHTML = '';
+
+            var total = 0;
+            carrinho.forEach(item => {
+                var listItem = document.createElement('li');
+                listItem.textContent = `${item.produto}: ${item.quantidade} x €${item.preco.toFixed(2)}`;
+                listaCarrinho.appendChild(listItem);
+                total += item.quantidade * item.preco;
+            });
+
+            document.getElementById('totalCarrinho').textContent = total.toFixed(2);
+        }
+
+        function finalizarCompra() {
+            var valorPago = parseFloat(document.getElementById('valorPago').value);
+            var total = parseFloat(document.getElementById('totalCarrinho').textContent);
+
+            if (valorPago >= total) {
+                var troco = valorPago - total;
+                document.getElementById('troco').textContent = troco.toFixed(2);
+
+                // Atualizar estoque no backend
+                fetch('http://127.0.0.1:5000/vender_produto', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ carrinho: carrinho, valor_pago: valorPago })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Erro ao finalizar compra.');
+                    }
+                })
+                .then(data => {
+                    alert(data.message);
+                    carrinho = [];
+                    atualizarCarrinho();
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                });
+            } else {
+                alert('Valor pago insuficiente.');
+            }
+        }
+
+        function atualizarEstoque() {
+    var produto = document.getElementById('produtoAtualizarEstoque').value;
+    var novoEstoque = parseInt(document.getElementById('novoEstoque').value);
+
+    fetch('http://127.0.0.1:5000/atualizar_estoque', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            produto: produto,
+            novo_estoque: novoEstoque
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Erro ao atualizar estoque.');
+        }
+    })
+    .then(data => {
+        alert(data.message); // Mensagem de sucesso ou erro
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+    });
+}
+
     </script>
 </body>
 </html>

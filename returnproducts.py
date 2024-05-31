@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, app, render_template, request, redirect, url_for, flash
 import firebase_admin
 from firebase_admin import firestore
 from teste_firebase import init_firebase
