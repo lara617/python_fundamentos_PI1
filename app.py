@@ -8,7 +8,7 @@ app.secret_key = 'supersecretkey'  # Necessário para usar o flash para mensagen
 # Configura as credenciais do Firebase
 cred = credentials.Certificate("script/papelaria-dela-firebase-adminsdk-dvfeh-b931973ed8.json")
 firebase_admin.initialize_app(cred)
-
+ 
 # Conecta ao Firestore
 db = firestore.client()
 
