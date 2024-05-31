@@ -1,132 +1,151 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Necessário para usar o flash para mensagens
+CORS(app)
 
-# Configura as credenciais do Firebase
-cred = credentials.Certificate("script/papelaria-dela-firebase-adminsdk-dvfeh-b931973ed8.json")
-firebase_admin.initialize_app(cred)
- 
+carrinho = []
+
+def init_firebase():
+    cred = firebase_admin.credentials.Certificate("credentials.json")
+    firebase_admin.initialize_app(cred)
+
+if not firebase_admin._apps: 
+    init_firebase()
+
 # Conecta ao Firestore
 db = firestore.client()
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        # Lógica para vender produto, visualizar estoque, etc.
-        pass
-    else:
-        return render_template('index.html')
+from flask import render_template
 
-@app.route('/index2', methods=['GET'])
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/index2')
 def index2():
     return render_template('index2.html')
 
-@app.route('/vender_produto', methods=['POST'])
-def vender_produto():
-    produto = request.form['produtoVender']
-    quantidade = int(request.form['quantidadeVender'])
-    valor_pago = float(request.form['valorPago'])
 
-    produto_ref = db.collection('produtos').document(produto)
-    produto_doc = produto_ref.get()
-
-    if produto_doc.exists:
-        produto_data = produto_doc.to_dict()
-        novo_estoque = produto_data['estoque'] - quantidade
-        if novo_estoque >= 0:
-            produto_ref.update({'estoque': novo_estoque})
-            flash('Produto vendido com sucesso!', 'success')
-        else:
-            flash('Estoque insuficiente!', 'error')
-    else:
-        flash('Produto não encontrado!', 'error')
-
-    return redirect(url_for('index'))
-
-@app.route('/visualizar_estoque_individual', methods=['POST'])
-def visualizar_estoque_individual():
-    produto = request.form['produto']
-    produto_ref = db.collection('produtos').document(produto)
-    produto_doc = produto_ref.get()
-
-    if produto_doc.exists:
-        produto_data = produto_doc.to_dict()
-        flash(f"Estoque do produto {produto}: {produto_data['estoque']}", 'success')
-    else:
-        flash('Produto não encontrado!', 'error')
-
-    return redirect(url_for('index'))
-
-@app.route('/visualizar_estoque_geral', methods=['POST'])
-def visualizar_estoque_geral():
-    produtos_ref = db.collection('produtos')
-    produtos = produtos_ref.stream()
-    estoque_geral = {produto.id: produto.to_dict()['estoque'] for produto in produtos}
+@app.route('/mostrar_formulario/<form_id>', methods=['GET'])
+def mostrar_formulario(form_id):
+    global carrinho
     
-    flash(f"Estoque geral: {estoque_geral}", 'success')
-    return redirect(url_for('index'))
+    forms = ['formVenderProduto', 'formAdicionarProduto', 'formRemoverProduto']
+    for form in forms:
+        if form == form_id:
+            continue
+        carrinho = []
+        
+    return jsonify({'message': f'Formulário {form_id} mostrado com sucesso.'}), 200
 
 @app.route('/atualizar_estoque', methods=['POST'])
 def atualizar_estoque():
-    produto = request.form['produtoAtualizar']
-    novo_estoque = int(request.form['novoEstoque'])
-    
+    data = request.get_json()
+    produto = data['produto']
+    novo_estoque = int(data['novo_estoque'])
+
     produto_ref = db.collection('produtos').document(produto)
-    produto_doc = produto_ref.get()
+    produto_ref.update({'estoque': novo_estoque})
 
-    if produto_doc.exists:
+    return jsonify({'message': 'Estoque atualizado com sucesso!'}), 200
+
+
+@app.route('/vender_produto', methods=['POST'])
+def vender_produto():
+    global carrinho
+    
+    data = request.get_json()
+    carrinho = data['carrinho']
+    valor_pago = float(data['valor_pago'])
+
+    total_compra = sum(item['quantidade'] * item['preco'] for item in carrinho)
+    lucro = total_compra * 0.1
+
+    troco = valor_pago - total_compra
+
+    # Atualizar estoque no banco de dados Firebase
+    for item in carrinho:
+        produto_ref = db.collection('produtos').document(item['produto'])
+        produto_doc = produto_ref.get()
+        estoque_atual = produto_doc.to_dict()['estoque']
+        novo_estoque = estoque_atual - item['quantidade']
         produto_ref.update({'estoque': novo_estoque})
-        flash('Estoque atualizado com sucesso!', 'success')
-    else:
-        flash('Produto não encontrado!', 'error')
 
-    return redirect(url_for('index'))
+    carrinho = []  # Limpar carrinho após finalizar compra
+
+    return jsonify({'message': 'Compra finalizada com sucesso!', 'total_compra': total_compra, 'troco': troco, 'lucro': lucro}), 200
 
 @app.route('/adicionar_produto', methods=['POST'])
 def adicionar_produto():
-    produto = request.form['novoProduto']
-    estoque = int(request.form['estoqueProduto'])
-    preco = float(request.form['precoProduto'])
-    
+    data = request.get_json()
+    produto = data['produto']
+    estoque = int(data['estoque'])
+    preco = float(data['preco'])
+
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
 
-    if produto_doc.exists:
-        flash('Produto já existe!', 'error')
-    else:
+    if not produto_doc.exists:
         produto_ref.set({'estoque': estoque, 'preco': preco})
-        flash('Produto adicionado com sucesso!', 'success')
+        return jsonify({'message': 'Produto adicionado com sucesso!'}), 200
+    else:
+        return jsonify({'error': 'Produto já existe!'}), 400
 
-    return redirect(url_for('index'))
-
-@app.route('/remover_produto', methods=['POST'])
+# Rota para remover um produto
+@app.route('/remover_produto', methods=['DELETE'])
 def remover_produto():
-    produto = request.form['produtoRemover']
-    
+    data = request.get_json()
+    produto = data['produto']
+
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
 
     if produto_doc.exists:
         produto_ref.delete()
-        flash('Produto removido com sucesso!', 'success')
+        return jsonify({'message': 'Produto removido com sucesso!'}), 200
     else:
-        flash('Produto não encontrado!', 'error')
+        return jsonify({'error': 'Produto não encontrado!'}), 404
 
-    return redirect(url_for('index'))
+@app.route('/visualizar_estoque_individual', methods=['POST'])
+def visualizar_estoque_individual():
+    data = request.get_json()
+    produto = data['produto']
+    produto_ref = db.collection('produtos').document(produto)
+    produto_doc = produto_ref.get()
 
-@app.route('/ver_lucro', methods=['POST'])
-def ver_lucro():
-    preco_venda = float(request.form['precoVenda'])
-    preco_compra = float(request.form['precoCompra'])
-    quantidade = int(request.form['quantidadeVendida'])
+    if produto_doc.exists:
+        produto_data = produto_doc.to_dict()
+        return jsonify({'estoque': produto_data['estoque'], 'preco': produto_data['preco']}), 200
+    else:
+        return jsonify({'error': 'Produto não encontrado!'}), 404
+
+@app.route('/visualizar_estoque_geral', methods=['GET'])
+def visualizar_estoque_geral():
+    produtos_ref = db.collection('produtos')
+    produtos = produtos_ref.stream()
+    estoque_geral = {}
+    for produto in produtos:
+        produto_data = produto.to_dict()
+        estoque_geral[produto.id] = {'estoque': produto_data['estoque'], 'preco': produto_data['preco']}
     
-    lucro = (preco_venda - preco_compra) * quantidade
-    flash(f'Lucro: {lucro:.2f}', 'success')
+    return jsonify({'estoque_geral': estoque_geral}), 200
+@app.route('/calcular_lucro_total', methods=['GET'])
+def calcular_lucro_total():
+    produtos_ref = db.collection('produtos').stream()
+    lucro_total = 0
 
-    return redirect(url_for('index'))
+    for produto in produtos_ref:
+        produto_data = produto.to_dict()
+        preco_compra = produto_data.get('preco_compra', 0)  # Preço de compra padrão é 0 se não definido
+        preco_venda = produto_data.get('preco_venda', 0)    # Preço de venda padrão é 0 se não definido
+        lucro_total += (preco_venda - preco_compra)
 
+    return jsonify({'lucro_total': lucro_total}), 200
 if __name__ == '__main__':
+    app.run(debug=True)
+
+if __name__ == '_main_':
     app.run(debug=True)
