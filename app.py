@@ -1,30 +1,29 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
+
+from teste_firebase import init_firebase
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Necessário para usar o flash para mensagens
 
-# Configura as credenciais do Firebase
-cred = credentials.Certificate("static/script/papelaria-dela-firebase-adminsdk-dvfeh-b931973ed8.json")
-firebase_admin.initialize_app(cred)
+if not firebase_admin._apps: 
+    init_firebase()
 
 # Conecta ao Firestore
 db = firestore.client()
-
+app = Flask(__name__)
+CORS(app)
 @app.route('/')
 def index():
-    return render_template('index2.html')
+    return "API está online."
 
-@app.route('/vender_produto', methods=['POST', 'GET'])
+@app.route('/vender_produto', methods=['POST'])
 def vender_produto():
-    produto = request.form['produtoVender']
-    quantidade = int(request.form['quantidadeVender'])
-    valor_pago = float(request.form['valorPago'])
-
-    print("Produto:", produto)
-    print("Quantidade:", quantidade)
-    print("Valor Pago:", valor_pago)
+    data = request.get_json()
+    produto = data['produto']
+    quantidade = int(data['quantidade'])
+    valor_pago = float(data['valor_pago'])
 
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
@@ -34,95 +33,69 @@ def vender_produto():
         novo_estoque = produto_data['estoque'] - quantidade
         if novo_estoque >= 0:
             produto_ref.update({'estoque': novo_estoque})
-            flash('Produto vendido com sucesso!', 'success')
+            return jsonify({'message': 'Produto vendido com sucesso!'}), 200
         else:
-            flash('Estoque insuficiente!', 'error')
+            return jsonify({'error': 'Estoque insuficiente!'}), 400
     else:
-        flash('Produto não encontrado!', 'error')
+        return jsonify({'error': 'Produto não encontrado!'}), 404
 
-    return redirect(url_for('index'))
-
-@app.route('/visualizar_estoque_individual', methods=['POST', 'GET'])
+@app.route('/visualizar_estoque_individual', methods=['POST'])
 def visualizar_estoque_individual():
-    produto = request.form['produto']
+    data = request.get_json()
+    produto = data['produto']
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
 
     if produto_doc.exists:
         produto_data = produto_doc.to_dict()
-        flash(f"Estoque do produto {produto}: {produto_data['estoque']}", 'success')
+        return jsonify({'estoque': produto_data['estoque']}), 200
     else:
-        flash('Produto não encontrado!', 'error')
+        return jsonify({'error': 'Produto não encontrado!'}), 404
 
-    return redirect(url_for('index'))
-
-@app.route('/visualizar_estoque_geral', methods=['POST', 'GET'])
+@app.route('/visualizar_estoque_geral', methods=['GET'])
 def visualizar_estoque_geral():
     produtos_ref = db.collection('produtos')
     produtos = produtos_ref.stream()
-    estoque_geral = {produto.id: produto.to_dict()['estoque'] for produto in produtos}
+    estoque_geral = {}
+    for produto in produtos:
+        produto_data = produto.to_dict()
+        estoque_geral[produto.id] = produto_data['estoque']
     
-    flash(f"Estoque geral: {estoque_geral}", 'success')
-    return redirect(url_for('index'))
+    return jsonify({'estoque_geral': estoque_geral}), 200
 
-@app.route('/atualizar_estoque', methods=['POST', 'GET'])
-def atualizar_estoque():
-    produto = request.form['produtoAtualizar']
-    novo_estoque = int(request.form['novoEstoque'])
-    
-    produto_ref = db.collection('produtos').document(produto)
-    produto_doc = produto_ref.get()
 
-    if produto_doc.exists:
-        produto_ref.update({'estoque': novo_estoque})
-        flash('Estoque atualizado com sucesso!', 'success')
-    else:
-        flash('Produto não encontrado!', 'error')
-
-    return redirect(url_for('index'))
-
-@app.route('/adicionar_produto', methods=['POST', 'GET'])
+@app.route('/adicionar_produto', methods=['POST'])
 def adicionar_produto():
-    produto = request.form['novoProduto']
-    estoque = int(request.form['estoqueProduto'])
-    preco = float(request.form['precoProduto'])
-    
+    data = request.get_json()
+    produto = data['produto']
+    estoque = int(data['estoque'])
+    preco = float(data['preco'])
+
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
 
-    if produto_doc.exists:
-        flash('Produto já existe!', 'error')
-    else:
+    if not produto_doc.exists:
         produto_ref.set({'estoque': estoque, 'preco': preco})
-        flash('Produto adicionado com sucesso!', 'success')
+        return jsonify({'message': 'Produto adicionado com sucesso!'}), 200
+    else:
+        return jsonify({'error': 'Produto já existe!'}), 400
 
-    return redirect(url_for('index'))
-
-@app.route('/remover_produto', methods=['POST', 'GET'])
+# Rota para remover um produto
+@app.route('/remover_produto', methods=['DELETE'])
 def remover_produto():
-    produto = request.form['produtoRemover']
-    
+    data = request.get_json()
+    produto = data['produto']
+
     produto_ref = db.collection('produtos').document(produto)
     produto_doc = produto_ref.get()
 
     if produto_doc.exists:
         produto_ref.delete()
-        flash('Produto removido com sucesso!', 'success')
+        return jsonify({'message': 'Produto removido com sucesso!'}), 200
     else:
-        flash('Produto não encontrado!', 'error')
+        return jsonify({'error': 'Produto não encontrado!'}), 404
 
-    return redirect(url_for('index'))
 
-@app.route('/ver_lucro', methods=['POST', 'GET'])
-def ver_lucro():
-    preco_venda = float(request.form['precoVenda'])
-    preco_compra = float(request.form['precoCompra'])
-    quantidade = int(request.form['quantidadeVendida'])
-    
-    lucro = (preco_venda - preco_compra) * quantidade
-    flash(f'Lucro: {lucro:.2f}', 'success')
-
-    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

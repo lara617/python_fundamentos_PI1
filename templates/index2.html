@@ -15,81 +15,38 @@
 
         <div id="menu">
             <button onclick="mostrarFormulario('formVenderProduto')">Vender Produto</button>
-            <button onclick="mostrarFormulario('formVisualizarEstoqueIndividual')">Visualizar Estoque Individual</button>
-            <button onclick="mostrarFormulario('formVisualizarEstoqueGeral')">Visualizar Estoque Geral</button>
-            <button onclick="mostrarFormulario('formAtualizarEstoque')">Atualizar Estoque</button>
             <button onclick="mostrarFormulario('formAdicionarProduto')">Adicionar Produto</button>
             <button onclick="mostrarFormulario('formRemoverProduto')">Remover Produto</button>
-            <button onclick="mostrarFormulario('formVerLucro')">Ver Lucro</button>
+            <button onclick="mostrarEstoqueGeral()">Visualizar Estoque Geral</button>
+            <!-- Outros botões de menu aqui -->
         </div>
 
         <!-- Formulário para vender produto -->
-        <form id="formVenderProduto" class="formulario" action="/vender_produto" method="post" style="display:none">
-            <label for="produtoVender">Nome do Produto:</label>
-            <input type="text" id="produtoVender" name="produtoVender" required>
-            <label for="quantidadeVender">Quantidade:</label>
-            <input type="number" id="quantidadeVender" name="quantidadeVender" required>
-            <label for="valorPago">Valor Pago:</label>
-            <input type="number" id="valorPago" name="valorPago" step="0.01" required>
-            <button type="submit">Vender Produto</button>
-            <div id="resultadoVenderProduto"></div>
+        <form id="formVenderProduto" class="formulario" style="display:none">
+            <!-- Seus campos de formulário para vender produto aqui -->
         </form>
 
-        <!-- Formulário para visualizar o estoque de um produto individual -->
-        <form id="formVisualizarEstoqueIndividual" class="formulario" action="/visualizar_estoque_individual" method="post" style="display:none">
-            <label for="produto">Nome do Produto:</label>
-            <input type="text" id="produto" name="produto" required>
-            <button type="submit">Visualizar Estoque</button>
-            <div id="resultadoVisualizacao"></div>
+        <!-- Formulário para adicionar produto -->
+        <form id="formAdicionarProduto" class="formulario" style="display:none">
+            <input type="text" id="novoProduto" placeholder="Nome do produto">
+            <input type="number" id="estoqueProduto" placeholder="Estoque inicial">
+            <input type="number" id="precoProduto" placeholder="Preço">
+            <button type="button" onclick="adicionarProduto()">Adicionar Produto</button>
         </form>
 
-        <!-- Formulário para visualizar o estoque geral -->
-        <form id="formVisualizarEstoqueGeral" class="formulario" action="/visualizar_estoque_geral" method="post" style="display:none">
-            <button type="submit">Visualizar Estoque Geral</button>
-            <div id="resultadoVisualizacao"></div>
+        <!-- Formulário para remover produto -->
+        <form id="formRemoverProduto" class="formulario" style="display:none">
+            <input type="text" id="produtoRemover" placeholder="Nome do produto">
+            <button type="button" onclick="removerProduto()">Remover Produto</button>
         </form>
 
-        <!-- Formulário para atualizar o estoque de um produto -->
-        <form id="formAtualizarEstoque" class="formulario" action="/atualizar_estoque" method="post" style="display:none">
-            <label for="produtoAtualizar">Nome do Produto:</label>
-            <input type="text" id="produtoAtualizar" name="produtoAtualizar" required>
-            <label for="novoEstoque">Novo Estoque:</label>
-            <input type="number" id="novoEstoque" name="novoEstoque" required>
-            <button type="submit">Atualizar Estoque</button>
-            <div id="resultadoAtualizacao"></div>
-        </form>
+        <div id="estoqueGeral" style="display:none">
+            <h2>Estoque Geral</h2>
+            <ul id="listaProdutos">
+                <!-- Os produtos em estoque serão exibidos aqui -->
+            </ul>
+        </div>
 
-        <!-- Formulário para adicionar um novo produto -->
-        <form id="formAdicionarProduto" class="formulario" action="/adicionar_produto" method="post" style="display:none">
-            <label for="novoProduto">Novo Produto:</label>
-            <input type="text" id="novoProduto" name="novoProduto" required>
-            <label for="estoqueProduto">Estoque:</label>
-            <input type="number" id="estoqueProduto" name="estoqueProduto" required>
-            <label for="precoProduto">Preço:</label>
-            <input type="number" id="precoProduto" name="precoProduto" step="0.01" required>
-            <button type="submit">Adicionar Produto</button>
-            <div id="resultadoAdicao"></div>
-        </form>
-
-        <!-- Formulário para remover um produto -->
-        <form id="formRemoverProduto" class="formulario" action="/remover_produto" method="post" style="display:none">
-            <label for="produtoRemover">Nome do Produto a Remover:</label>
-            <input type="text" id="produtoRemover" name="produtoRemover" required>
-            <button type="submit">Remover Produto</button>
-            <div id="resultadoRemocao"></div>
-        </form>
-
-        <!-- Formulário para ver lucro -->
-        <form id="formVerLucro" class="formulario" action="/ver_lucro" method="post" style="display:none">
-            <label for="precoVenda">Preço de Venda:</label>
-            <input type="number" id="precoVenda" name="precoVenda" step="0.01" required>
-            <label for="precoCompra">Preço de Compra:</label>
-            <input type="number" id="precoCompra" name="precoCompra" step="0.01" required>
-            <label for="quantidadeVendida">Quantidade Vendida:</label>
-            <input type="number" id="quantidadeVendida" name="quantidadeVendida" required>
-            <button type="submit">Calcular Lucro</button>
-            <div id="resultadoLucro"></div>
-        </form>
     </div>
     <footer>
         <p>&copy; Papelaria DELA</p>
@@ -102,6 +59,95 @@
                 forms[i].style.display = 'none';
             }
             document.getElementById(formId).style.display = 'block';
+        }
+
+        function adicionarProduto() {
+            var produto = document.getElementById('novoProduto').value;
+            var estoque = document.getElementById('estoqueProduto').value;
+            var preco = document.getElementById('precoProduto').value;
+
+            fetch('http://127.0.0.1:5000/adicionar_produto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    produto: produto,
+                    estoque: estoque,
+                    preco: preco
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro ao adicionar produto.');
+                }
+            })
+            .then(data => {
+                alert(data.message); // Mensagem de sucesso ou erro
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+            });
+        }
+
+        function removerProduto() {
+            var produto = document.getElementById('produtoRemover').value;
+
+            fetch('http://127.0.0.1:5000/remover_produto', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    produto: produto
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro ao remover produto.');
+                }
+            })
+            .then(data => {
+                alert(data.message); // Mensagem de sucesso ou erro
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+            });
+        }
+
+        function mostrarEstoqueGeral() {
+            fetch('http://127.0.0.1:5000/visualizar_estoque_geral')
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro ao obter estoque geral.');
+                }
+            })
+            .then(data => {
+                exibirEstoqueGeral(data.estoque_geral);
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+            });
+        }
+
+        function exibirEstoqueGeral(estoque) {
+            var listaProdutos = document.getElementById('listaProdutos');
+            listaProdutos.innerHTML = '';
+
+            for (var produto in estoque) {
+                var quantidade = estoque[produto];
+                var listItem = document.createElement('li');
+                listItem.textContent = produto + ': ' + quantidade;
+                listaProdutos.appendChild(listItem);
+            }
+
+            document.getElementById('estoqueGeral').style.display = 'block';
         }
     </script>
 </body>
