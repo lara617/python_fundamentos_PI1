@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Necessário para usar o flash para mensagens
 
 # Configura as credenciais do Firebase
-cred = credentials.Certificate("script/papelaria-dela-firebase-adminsdk-dvfeh-b931973ed8.json")
+cred = credentials.Certificate("cretencials.json")
 firebase_admin.initialize_app(cred)
 
 # Conecta ao Firestore
